@@ -5,11 +5,16 @@ on:
     branches: [main]
     paths:
       - 'wp-content/plugins/wp-ai-translator/**'
+      - 'VERSION'
       - '.github/workflows/release.yml'
   workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -19,41 +24,83 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Read plugin version
-        id: ver
+      - name: Skip bot / release commits
+        id: skip
         run: |
-          FILE="wp-content/plugins/wp-ai-translator/wp-ai-translator.php"
-          VERSION=$(grep -E "^\s*\*\s*Version:" "$FILE" | head -1 | sed -E 's/.*Version:[[:space:]]*//')
-          CONST=$(grep -E "define\(\s*'WPAI_VERSION'" "$FILE" | sed -E "s/.*'([^']+)'.*/\1/")
-          if [ -z "$VERSION" ]; then
-            echo "No Version header found" >&2
-            exit 1
+          MSG="${{ github.event.head_commit.message }}"
+          ACTOR="${{ github.actor }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
-          if [ -n "$CONST" ] && [ "$CONST" != "$VERSION" ]; then
-            echo "Version header ($VERSION) != WPAI_VERSION ($CONST)" >&2
-            exit 1
+          if [ "$ACTOR" = "github-actions[bot]" ] || [[ "$MSG" == *"[skip ci]"* ]] || [[ "$MSG" == *"chore(release)"* ]]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Skipping auto-version for bot/release commit"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Plugin version: $VERSION"
 
-      - name: Check if release exists
-        id: check
+      - name: Configure Git
+        if: steps.skip.outputs.skip != 'true'
+        run: |
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
+      - name: Resolve version (auto patch only)
+        if: steps.skip.outputs.skip != 'true'
+        id: ver
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="${{ steps.ver.outputs.tag }}"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Release $TAG already exists — skip"
+          set -euo pipefail
+          FILE="wp-content/plugins/wp-ai-translator/wp-ai-translator.php"
+          CURRENT=$(tr -d '[:space:]' < VERSION)
+          if ! [[ "$CURRENT" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "VERSION inválida: '$CURRENT'" >&2
+            exit 1
+          fi
+
+          # Si ya existe release de CURRENT → solo sube el patch (1.7.x).
+          # Si no existe (p. ej. cambiaron a mano 1.8.0) → usa CURRENT tal cual.
+          if gh release view "v${CURRENT}" >/dev/null 2>&1; then
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+            NEW="${MAJOR}.${MINOR}.$((PATCH + 1))"
+            echo "Release v${CURRENT} ya existe → bump patch a ${NEW}"
           else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "Will create release $TAG"
+            NEW="$CURRENT"
+            echo "Sin release v${CURRENT} → publicar tal cual (cambio mayor/menor manual o primer release)"
+          fi
+
+          echo "$NEW" > VERSION
+          sed -i -E "s/^(\s*\*\s*Version:\s*)[0-9]+\.[0-9]+\.[0-9]+/\1${NEW}/" "$FILE"
+          sed -i -E "s/(define\(\s*'WPAI_VERSION',\s*')[0-9]+\.[0-9]+\.[0-9]+(')/\1${NEW}\2/" "$FILE"
+
+          HEADER=$(grep -E "^\s*\*\s*Version:" "$FILE" | head -1 | sed -E 's/.*Version:[[:space:]]*//')
+          CONST=$(grep -E "define\(\s*'WPAI_VERSION'" "$FILE" | sed -E "s/.*'([^']+)'.*/\1/")
+          if [ "$HEADER" != "$NEW" ] || [ "$CONST" != "$NEW" ]; then
+            echo "Fallo al actualizar PHP (header=$HEADER const=$CONST expected=$NEW)" >&2
+            exit 1
+          fi
+
+          echo "version=$NEW" >> "$GITHUB_OUTPUT"
+          echo "tag=v$NEW" >> "$GITHUB_OUTPUT"
+
+      - name: Commit version bump
+        if: steps.skip.outputs.skip != 'true'
+        run: |
+          VERSION="${{ steps.ver.outputs.version }}"
+          git add VERSION wp-content/plugins/wp-ai-translator/wp-ai-translator.php
+          if git diff --cached --quiet; then
+            echo "Sin cambios de versión que commitear"
+          else
+            git commit -m "chore(release): v${VERSION} [skip ci]"
+            git push origin main
           fi
 
       - name: Build ZIP
-        if: steps.check.outputs.exists == 'false'
+        if: steps.skip.outputs.skip != 'true'
         run: |
           VERSION="${{ steps.ver.outputs.version }}"
           mkdir -p dist
@@ -66,14 +113,18 @@ jobs:
           ls -la dist/
 
       - name: Create GitHub Release
-        if: steps.check.outputs.exists == 'false'
+        if: steps.skip.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ steps.ver.outputs.tag }}"
           VERSION="${{ steps.ver.outputs.version }}"
-          git tag -a "$TAG" -m "Release $TAG" || true
-          git push origin "$TAG" || true
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG ya existe — nada que hacer"
+            exit 0
+          fi
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
           gh release create "$TAG" \
             dist/wp-ai-translator.zip \
             "dist/wp-ai-translator-${VERSION}.zip" \

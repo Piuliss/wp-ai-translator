@@ -41,12 +41,17 @@ El plugin comprueba releases públicos de GitHub y ofrece actualizar desde **Plu
 
 ## Releases
 
-Al subir a `main` un cambio en el plugin con una **versión nueva** (header `Version` + `WPAI_VERSION`), GitHub Actions crea el tag `vX.Y.Z` y publica un release con:
+Fuente de verdad: archivo `VERSION` (sincronizado al header del plugin y a `WPAI_VERSION`).
+
+Al pushear a `main` un cambio del plugin:
+
+- Si ya existe release de esa versión → **solo sube el patch** (`1.7.1` → `1.7.2`) y publica.
+- Si no existe (p. ej. cambiaste a mano a `1.8.0`) → publica esa versión tal cual.
+
+Major/minor los cambiás vos a mano en `VERSION` (y el workflow actualiza el PHP). El ZIP del release:
 
 - `wp-ai-translator.zip` (para instalar / actualizar)
 - `wp-ai-translator-X.Y.Z.zip` (archivo versionado)
-
-Si el tag ya existe, el workflow no vuelve a publicar.
 ## Uso rápido
 
 1. Configurá Ollama o MiniMax y comprobá con **Probar proveedor**.
