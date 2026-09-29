@@ -1,0 +1,82 @@
+name: Release plugin
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'wp-content/plugins/wp-ai-translator/**'
+      - '.github/workflows/release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read plugin version
+        id: ver
+        run: |
+          FILE="wp-content/plugins/wp-ai-translator/wp-ai-translator.php"
+          VERSION=$(grep -E "^\s*\*\s*Version:" "$FILE" | head -1 | sed -E 's/.*Version:[[:space:]]*//')
+          CONST=$(grep -E "define\(\s*'WPAI_VERSION'" "$FILE" | sed -E "s/.*'([^']+)'.*/\1/")
+          if [ -z "$VERSION" ]; then
+            echo "No Version header found" >&2
+            exit 1
+          fi
+          if [ -n "$CONST" ] && [ "$CONST" != "$VERSION" ]; then
+            echo "Version header ($VERSION) != WPAI_VERSION ($CONST)" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Plugin version: $VERSION"
+
+      - name: Check if release exists
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.ver.outputs.tag }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Release $TAG already exists — skip"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Will create release $TAG"
+          fi
+
+      - name: Build ZIP
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          VERSION="${{ steps.ver.outputs.version }}"
+          mkdir -p dist
+          (
+            cd wp-content/plugins
+            zip -r "../../dist/wp-ai-translator.zip" wp-ai-translator \
+              -x "*.DS_Store" -x "*/.git/*" -x "*/tests/*"
+            cp "../../dist/wp-ai-translator.zip" "../../dist/wp-ai-translator-${VERSION}.zip"
+          )
+          ls -la dist/
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.ver.outputs.tag }}"
+          VERSION="${{ steps.ver.outputs.version }}"
+          git tag -a "$TAG" -m "Release $TAG" || true
+          git push origin "$TAG" || true
+          gh release create "$TAG" \
+            dist/wp-ai-translator.zip \
+            "dist/wp-ai-translator-${VERSION}.zip" \
+            --title "Traducción AI ${VERSION}" \
+            --generate-notes \
+            --latest

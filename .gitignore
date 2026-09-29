@@ -1,0 +1,25 @@
+# Entorno local / secretos
+.env
+.env.local
+*.log
+
+# Sitio de prueba (no publicar)
+site/
+site/*.wpress
+site/extracted/
+
+# Artefactos locales
+.DS_Store
+*.zip
+dist/
+
+# Docker / IDE
+docker/data/
+.idea/
+.vscode/
+
+# WordPress runtime (solo versionamos el plugin)
+wp-content/*
+!wp-content/plugins/
+wp-content/plugins/*
+!wp-content/plugins/wp-ai-translator/
