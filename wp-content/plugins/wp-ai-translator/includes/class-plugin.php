@@ -51,10 +51,13 @@ class Plugin {
 		$client         = ( new Translator_Factory( $this->settings ) )->make();
 		$translator     = new WPML_Job_Translator( $client, $logger );
 		$queue          = new Queue( $translator, $logger );
+		$aioseo         = new AIOSEO_Translator( $this->settings, $client, $logger );
 
 		( new Admin( $this->settings, $logger ) )->register();
 		( new Admin_Queue( $this->settings, $queue, $logger ) )->register();
 		( new GitHub_Updater() )->register();
+		$aioseo->register();
+		( new CLI( $aioseo, $this->settings, $logger ) )->register();
 		if ( $this->settings->get( 'enable_public_lang_preview', false ) ) {
 			( new Content_Filter( $client, $this->settings ) )->register();
 		}

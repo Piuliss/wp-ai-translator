@@ -317,6 +317,16 @@ class Admin {
 							</td>
 						</tr>
 						<tr>
+							<th scope="row"><?php echo esc_html__( 'AIOSEO', 'wp-ai-translator' ); ?></th>
+							<td>
+								<label>
+									<input type="checkbox" name="<?php echo esc_attr( $name ); ?>[translate_aioseo]" value="1" <?php checked( ! empty( $s['translate_aioseo'] ) ); ?> />
+									<?php echo esc_html__( 'Traducir campos SEO de AIOSEO', 'wp-ai-translator' ); ?>
+								</label>
+								<p class="description"><?php echo esc_html__( 'Tras completar un job WPML, traduce title/description/Open Graph/Twitter del post original al traducido. No pisa ediciones manuales en el idioma destino. Activado por defecto.', 'wp-ai-translator' ); ?></p>
+							</td>
+						</tr>
+						<tr>
 							<th scope="row"><label for="wpai_prompt"><?php echo esc_html__( 'Prompt base', 'wp-ai-translator' ); ?></label></th>
 							<td>
 								<textarea id="wpai_prompt" name="<?php echo esc_attr( $name ); ?>[prompt]" rows="4" class="large-text"><?php echo esc_textarea( $s['prompt'] ); ?></textarea>

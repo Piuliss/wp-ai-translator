@@ -148,6 +148,29 @@ class WPML_Job_Translator {
 			return new \WP_Error( 'wpai_save_failed', __( 'WPML rechazó el guardado de la traducción.', 'wp-ai-translator' ) );
 		}
 
+		if ( $complete ) {
+			/**
+			 * Fires after a WPML job was translated and marked complete.
+			 *
+			 * Used for side effects (e.g. AIOSEO fields) that must not fail the content job.
+			 *
+			 * @param int    $job_id Job ID.
+			 * @param object $job    WPML translation job object.
+			 */
+			try {
+				do_action( 'wpai_job_translated', $job_id, $job );
+			} catch ( \Throwable $e ) {
+				$this->logger->error(
+					sprintf(
+						/* translators: %s: exception message */
+						__( 'Post-proceso tras job falló: %s', 'wp-ai-translator' ),
+						$e->getMessage()
+					),
+					array( 'job_id' => $job_id )
+				);
+			}
+		}
+
 		return true;
 	}
 
