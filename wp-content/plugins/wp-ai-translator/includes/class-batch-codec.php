@@ -35,7 +35,15 @@ class Batch_Codec {
 			. "- Cada valor de salida es SOLO el texto traducido correspondiente.\n"
 			. "- Conserva HTML, placeholders y formato del original.\n"
 			. "- No agregues claves nuevas ni omitas ninguna clave.";
-		return $out;
+
+		/**
+		 * Filter the batch system prompt (e.g. SEO-specific rules).
+		 *
+		 * @param string $out         System prompt.
+		 * @param string $source_lang Source language.
+		 * @param string $target_lang Target language.
+		 */
+		return (string) apply_filters( 'wpai_batch_system_prompt', $out, $source_lang, $target_lang );
 	}
 
 	/**

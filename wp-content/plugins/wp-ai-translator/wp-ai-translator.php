@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Traducción AI (WPML)
  * Description:       Motor de traducción (Ollama / MiniMax) para WordPress y WPML (automático y manual).
- * Version:           1.7.2
+ * Version:           1.8.0
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            Raúl Benitez Netto
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WPAI_VERSION', '1.7.2' );
+define( 'WPAI_VERSION', '1.8.0' );
 define( 'WPAI_PLUGIN_FILE', __FILE__ );
 define( 'WPAI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WPAI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -43,6 +43,8 @@ require_once WPAI_PLUGIN_DIR . 'includes/class-queue.php';
 require_once WPAI_PLUGIN_DIR . 'includes/class-wpml-job-translator.php';
 require_once WPAI_PLUGIN_DIR . 'includes/class-wpml-hooks.php';
 require_once WPAI_PLUGIN_DIR . 'includes/class-ate-interceptor.php';
+require_once WPAI_PLUGIN_DIR . 'includes/class-aioseo-translator.php';
+require_once WPAI_PLUGIN_DIR . 'includes/class-cli.php';
 require_once WPAI_PLUGIN_DIR . 'includes/class-github-updater.php';
 require_once WPAI_PLUGIN_DIR . 'includes/class-plugin.php';
 

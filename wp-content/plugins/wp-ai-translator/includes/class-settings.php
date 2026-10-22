@@ -60,6 +60,9 @@ class Settings {
 
 		$settings['wpml_engine']                 = ! empty( $settings['wpml_engine'] );
 		$settings['enable_public_lang_preview']  = ! empty( $settings['enable_public_lang_preview'] );
+		$settings['translate_aioseo']            = ! array_key_exists( 'translate_aioseo', $options )
+			? true
+			: ! empty( $settings['translate_aioseo'] );
 
 		$this->cache = $settings;
 		return $this->cache;
@@ -201,6 +204,7 @@ class Settings {
 			'prompt'                     => $prompt,
 			'wpml_engine'                => ! empty( $input['wpml_engine'] ),
 			'enable_public_lang_preview' => ! empty( $input['enable_public_lang_preview'] ),
+			'translate_aioseo'           => ! empty( $input['translate_aioseo'] ),
 			'minimax_base_url'           => rtrim( $minimax_base, '/' ),
 			'minimax_model'              => $minimax_model,
 			'minimax_api_key_enc'        => $this->sanitize_secret_field( $input, $current, 'minimax_api_key', 'minimax_api_key_enc', 'minimax_api_key_clear' ),
@@ -256,6 +260,7 @@ class Settings {
 			'password'                   => '',
 			'wpml_engine'                => false,
 			'enable_public_lang_preview' => false,
+			'translate_aioseo'           => true,
 			'minimax_base_url'           => 'https://api.minimax.io/v1',
 			'minimax_model'              => 'MiniMax-M3',
 			'minimax_api_key'            => '',

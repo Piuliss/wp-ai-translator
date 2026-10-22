@@ -10,6 +10,8 @@ Proyecto personal de código abierto. **No está afiliado** a WPML, Ollama ni Mi
 - Configuración 100% desde el admin de WordPress (sin `.env` en el servidor)
 - Claves API cifradas en la base de datos (OpenSSL + salts de WordPress)
 - Cola asíncrona con WP-Cron y reintento ante rate limits / ventanas de tokens
+- Traducción de campos SEO de **AIOSEO** (title, description, Open Graph, Twitter) tras completar un job WPML
+- WP-CLI `wp wpai seo-backfill` para corregir posts ya traducidos
 - Interfaz en español: menú **Traducción AI**
 - Hardening básico: validación de URLs, preview público desactivado por defecto, sanitizado de salida del modelo
 
@@ -58,8 +60,24 @@ Major/minor los cambiás vos a mano en `VERSION` (y el workflow actualiza el PHP
 2. Activá **Usar este proveedor como motor de WPML**.
 3. En WPML, enviá trabajos de traducción (manual o Translate Everything).
 4. Los jobs locales se encolan y se procesan en segundo plano.
+5. Con AIOSEO activo y la opción **Traducir campos SEO de AIOSEO** (ON por defecto), al completar un job se traducen también los meta SEO del post.
+
+### WP-CLI (backfill SEO)
+
+```bash
+# Simular para un post fuente (ES)
+wp wpai seo-backfill --ids=12199 --dry-run
+
+# Aplicar
+wp wpai seo-backfill --ids=12199
+
+# Recorrer CPT publicacion
+wp wpai seo-backfill --post_type=publicacion
+```
 
 Si venís de la versión antigua `wp-ollama-translator`, al activar `wp-ai-translator` se migran opciones y cola automáticamente.
+
+Ver también [CHANGELOG.md](CHANGELOG.md).
 
 ## Seguridad
 
